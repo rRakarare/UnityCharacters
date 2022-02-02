@@ -22,7 +22,21 @@ public class AnimationAndMovementController : MonoBehaviour
     bool isRunPressed;
     float rotationFactorPerFrame = 15f;
 
-    float runMultiplier = 3.0f;
+    float runMultiplier = 5.0f;
+
+ // gravity Variables
+
+    float gravity = -9.81f;
+    float groundedGravity = -0.5f;
+
+ // jump variables
+
+    bool isJumpPressed = false;
+    float initialJumpVelocity;
+    float maxJumpHeight = 4.0f;
+    float maxJumpTime = 0.5f;
+    bool isJumping;
+
 
     void Awake()
     {
@@ -39,6 +53,40 @@ public class AnimationAndMovementController : MonoBehaviour
 
         playerInput.CharacterControlls.Run.started += onRun;
         playerInput.CharacterControlls.Run.canceled += onRun;
+
+        playerInput.CharacterControlls.Jump.started += onJump;
+        playerInput.CharacterControlls.Jump.canceled += onJump;
+        setupJumpVariables();
+
+    }
+
+    void setupJumpVariables() 
+    {
+        gravity = (-2 * maxJumpHeight) / Mathf.Pow(maxJumpTime / 2, 2);
+        initialJumpVelocity = (2 * maxJumpHeight) / (maxJumpTime / 2);
+        Debug.Log(initialJumpVelocity);
+    }
+
+    void handleJump()
+    {
+        
+        if (!isJumping && characterController.isGrounded && isJumpPressed) {
+            isJumping = true;
+            currentMovement.y = initialJumpVelocity * .5f;
+            currentRunMovement.y = initialJumpVelocity * .5f;
+
+            Debug.Log(currentMovement);
+
+        } else if (!isJumpPressed && isJumping && characterController.isGrounded) {
+            isJumping = false;
+        }
+    }
+
+    void onJump(InputAction.CallbackContext context)
+    {
+        isJumpPressed = context.ReadValueAsButton();
+        
+
     }
 
     void onRun(InputAction.CallbackContext context)
@@ -109,19 +157,23 @@ public class AnimationAndMovementController : MonoBehaviour
 
     void handleGravity() {
         if (characterController.isGrounded) {
-            float groundedGravity = -0.5f;
+
             currentMovement.y = groundedGravity;
             currentRunMovement.y = groundedGravity;
         } else {
-            float gravity = -9.8f;
-            currentMovement.y = gravity;
-            currentRunMovement.y = gravity;
+
+            float previousYVelocity = currentMovement.y;
+            float newYVelocity = currentMovement.y + (gravity * Time.deltaTime);
+            float nextYVelocity = (previousYVelocity + newYVelocity) * .5f;
+
+            currentMovement.y = nextYVelocity;
+            currentRunMovement.y = nextYVelocity;
         }
     }
 
     void Update()
     {
-        handleGravity();
+        
         handleRotation();
         handleAnimation();
 
@@ -134,6 +186,8 @@ public class AnimationAndMovementController : MonoBehaviour
             characterController.Move(currentMovement * Time.deltaTime);
         }
 
+        handleGravity();
+        handleJump();
 
     }
 
